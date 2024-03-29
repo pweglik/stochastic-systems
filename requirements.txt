@@ -1,2 +1,6 @@
 gymnasium==0.29.1
 gymnasium[box2d]
+matplotlib
+numpy
+tqdm
+torch
