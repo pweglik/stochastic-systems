@@ -1,5 +1,6 @@
-gymnasium==0.29.1
+gymnasium==1.0.0a1
 gymnasium[box2d]
+gymnasium[mujoco]
 matplotlib
 numpy
 tqdm
