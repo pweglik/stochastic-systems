@@ -3,7 +3,9 @@
 ### Setup
 
 ```
-conda activate stochastic-systems python=3.10
+conda create --name stochastic-systems python=3.10
+
+conda activate stochastic-systems
 
 pip install swig
 pip install -r requirements.txt
