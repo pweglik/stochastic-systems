@@ -4,4 +4,4 @@ gymnasium[mujoco]
 matplotlib
 numpy
 tqdm
-torch
+torch==2.0.1
