@@ -31,25 +31,28 @@ class RLNN(nn.Module):
             tmp = np.product(param.size())
 
             if torch.cuda.is_available():
-                param.data.copy_(torch.from_numpy(
-                    params[cpt:cpt + tmp]).view(param.size()).cuda())
+                param.data.copy_(
+                    torch.from_numpy(params[cpt : cpt + tmp]).view(param.size()).cuda()
+                )
             else:
-                param.data.copy_(torch.from_numpy(
-                    params[cpt:cpt + tmp]).view(param.size()))
+                param.data.copy_(
+                    torch.from_numpy(params[cpt : cpt + tmp]).view(param.size())
+                )
             cpt += tmp
 
     def get_params(self):
         """
         Returns parameters of the actor
         """
-        return deepcopy(np.hstack([to_numpy(v).flatten() for v in
-                                   self.parameters()]))
+        return deepcopy(np.hstack([to_numpy(v).flatten() for v in self.parameters()]))
 
     def get_grads(self):
         """
         Returns the current gradient
         """
-        return deepcopy(np.hstack([to_numpy(v.grad).flatten() for v in self.parameters()]))
+        return deepcopy(
+            np.hstack([to_numpy(v.grad).flatten() for v in self.parameters()])
+        )
 
     def get_size(self):
         """
@@ -65,18 +68,17 @@ class RLNN(nn.Module):
             return
 
         self.load_state_dict(
-            torch.load('{}/{}.pkl'.format(filename, net_name),
-                       map_location=lambda storage, loc: storage)
+            torch.load(
+                "{}/{}.pkl".format(filename, net_name),
+                map_location=lambda storage, loc: storage,
+            )
         )
 
     def save_model(self, output, net_name):
         """
         Saves the model
         """
-        torch.save(
-            self.state_dict(),
-            '{}/{}.pkl'.format(output, net_name)
-        )
+        torch.save(self.state_dict(), "{}/{}.pkl".format(output, net_name))
 
 
 class Actor(RLNN):

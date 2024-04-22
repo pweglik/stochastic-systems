@@ -36,9 +36,9 @@ class SGD(Optimizer):
         self.stepsize, self.momentum = stepsize, momentum
 
     def step(self, grad):
-        if not hasattr(self, 'v'):
+        if not hasattr(self, "v"):
             self.v = np.zeros(grad.shape[0], dtype=np.float32)
-        self.v = self.momentum * self.v + (1. - self.momentum) * grad
+        self.v = self.momentum * self.v + (1.0 - self.momentum) * grad
         step = -self.stepsize * self.v
         return step
 
@@ -63,8 +63,7 @@ class Adam(Optimizer):
             self.v = np.zeros(grad.shape[0], dtype=np.float32)
 
         self.t += 1
-        a = self.stepsize * np.sqrt(1 - self.beta2 **
-                                    self.t) / (1 - self.beta1 ** self.t)
+        a = self.stepsize * np.sqrt(1 - self.beta2**self.t) / (1 - self.beta1**self.t)
         self.m = self.beta1 * self.m + (1 - self.beta1) * grad
         self.v = self.beta2 * self.v + (1 - self.beta2) * (grad * grad)
         step = -a * self.m / (np.sqrt(self.v) + self.epsilon)

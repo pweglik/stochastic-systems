@@ -9,12 +9,15 @@ class GA:
     Basic population based genetic algorithm
     """
 
-    def __init__(self, num_params,
-                 pop_size=100,
-                 elite_frac=0.1,
-                 mut_rate=0.9,
-                 mut_amp=0.1,
-                 generator=None):
+    def __init__(
+        self,
+        num_params,
+        pop_size=100,
+        elite_frac=0.1,
+        mut_rate=0.9,
+        mut_amp=0.1,
+        generator=None,
+    ):
 
         # misc
         self.num_params = num_params
@@ -86,13 +89,13 @@ class GA:
         for ind in range(tmp_individuals.shape[0]):
             u = np.random.rand(self.num_params)
             params = tmp_individuals[ind]
-            noise = np.random.normal(
-                loc=1, scale=self.mut_amp * (u < self.mut_rate))
+            noise = np.random.normal(loc=1, scale=self.mut_amp * (u < self.mut_rate))
             params *= noise
 
         # replace individuals with new batch
-        self.individuals[self.order[:self.pop_size -
-                                    self.n_elites]] = np.array(tmp_individuals)
+        self.individuals[self.order[: self.pop_size - self.n_elites]] = np.array(
+            tmp_individuals
+        )
 
         return deepcopy(self.individuals)
 
@@ -100,8 +103,9 @@ class GA:
         """
         Updates the population
         """
-        assert(len(scores) == len(self.individuals)
-               ), "Inconsistent reward_table size reported."
+        assert len(scores) == len(
+            self.individuals
+        ), "Inconsistent reward_table size reported."
 
         # add new fitness evaluations
         self.fitness = [s for s in scores]

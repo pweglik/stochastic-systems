@@ -44,9 +44,11 @@ class AdaptiveParamNoiseSpec(object):
     From OpenAI Baselines: https://github.com/openai/baselines/blob/master/baselines/ddpg/noise.py
     """
 
-    def __init__(self, initial_stddev=0.1, desired_action_stddev=0.2, adaptation_coefficient=1.01):
+    def __init__(
+        self, initial_stddev=0.1, desired_action_stddev=0.2, adaptation_coefficient=1.01
+    ):
         """
-        Note that initial_stddev and current_stddev refer to std of parameter noise, 
+        Note that initial_stddev and current_stddev refer to std of parameter noise,
         but desired_action_stddev refers to (as name notes) desired std in action space
         """
         self.initial_stddev = initial_stddev
@@ -65,13 +67,15 @@ class AdaptiveParamNoiseSpec(object):
 
     def get_stats(self):
         stats = {
-            'param_noise_stddev': self.current_stddev,
+            "param_noise_stddev": self.current_stddev,
         }
         return stats
 
     def __repr__(self):
-        fmt = 'AdaptiveParamNoiseSpec(initial_stddev={}, desired_action_stddev={}, adaptation_coefficient={})'
-        return fmt.format(self.initial_stddev, self.desired_action_stddev, self.adaptation_coefficient)
+        fmt = "AdaptiveParamNoiseSpec(initial_stddev={}, desired_action_stddev={}, adaptation_coefficient={})"
+        return fmt.format(
+            self.initial_stddev, self.desired_action_stddev, self.adaptation_coefficient
+        )
 
 
 def ddpg_distance_metric(actions1, actions2):

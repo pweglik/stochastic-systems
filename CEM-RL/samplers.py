@@ -1,13 +1,9 @@
 import numpy as np
-import operator
 
-from scipy.stats import multivariate_normal
 from scipy.stats import norm
-from scipy.misc import logsumexp
 
 
-class BasicSampler():
-
+class BasicSampler:
     """
     Simple sampler that relies on the ask method
     of the optimizers
@@ -22,8 +18,7 @@ class BasicSampler():
         return optimizer.ask(pop_size), 0, 0, 0, 0, 0
 
 
-class IMSampler():
-
+class IMSampler:
     """
     Importance mixing sampler optimized for diagonal covariance matrix
     """
@@ -83,7 +78,7 @@ class IMSampler():
 
                 # rejection sampling
                 if np.log(1 - u) >= old_log_pdf(sample) - new_log_pdf(sample):
-                    params[-n_sampled-1] = sample
+                    params[-n_sampled - 1] = sample
                     n_sampled += 1
 
             if n_reused + n_sampled >= pop_size:

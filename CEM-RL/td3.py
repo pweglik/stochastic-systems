@@ -18,22 +18,26 @@ class TD3(object):
     def __init__(self, state_dim, action_dim, max_action, memory, args):
 
         # actor
-        self.actor = Actor(state_dim, action_dim, max_action,
-                           layer_norm=args.layer_norm)
+        self.actor = Actor(
+            state_dim, action_dim, max_action, layer_norm=args.layer_norm
+        )
         self.actor_target = Actor(
-            state_dim, action_dim, max_action, layer_norm=args.layer_norm)
+            state_dim, action_dim, max_action, layer_norm=args.layer_norm
+        )
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=args.actor_lr)
+            self.actor.parameters(), lr=args.actor_lr
+        )
 
         # critic
-        self.critic = CriticTD3(state_dim, action_dim,
-                                layer_norm=args.layer_norm)
+        self.critic = CriticTD3(state_dim, action_dim, layer_norm=args.layer_norm)
         self.critic_target = CriticTD3(
-            state_dim, action_dim, layer_norm=args.layer_norm)
+            state_dim, action_dim, layer_norm=args.layer_norm
+        )
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=args.critic_lr)
+            self.critic.parameters(), lr=args.critic_lr
+        )
 
         # cuda
         if torch.cuda.is_available():
@@ -58,8 +62,7 @@ class TD3(object):
         self.policy_freq = args.policy_freq
 
     def select_action(self, state, noise=None):
-        state = FloatTensor(
-            state.reshape(-1, self.state_dim))
+        state = FloatTensor(state.reshape(-1, self.state_dim))
         action = self.actor(state).cpu().data.numpy().flatten()
 
         if noise is not None:
@@ -80,16 +83,19 @@ class TD3(object):
             done = FloatTensor(1 - d)
 
             # Select action according to policy and add clipped noise
-            noise = np.clip(np.random.normal(0, self.policy_noise, size=(
-                self.batch_size, self.action_dim)), -self.noise_clip, self.noise_clip)
-            next_action = self.actor_target(
-                next_state) + FloatTensor(noise)
+            noise = np.clip(
+                np.random.normal(
+                    0, self.policy_noise, size=(self.batch_size, self.action_dim)
+                ),
+                -self.noise_clip,
+                self.noise_clip,
+            )
+            next_action = self.actor_target(next_state) + FloatTensor(noise)
             next_action = next_action.clamp(-self.max_action, self.max_action)
 
             # Q target = reward + discount * min_i(Qi(next_state, pi(next_state)))
             with torch.no_grad():
-                target_Q1, target_Q2 = self.critic_target(
-                    next_state, next_action)
+                target_Q1, target_Q2 = self.critic_target(next_state, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
                 target_Q = reward + (done * self.discount * target_Q)
 
@@ -97,8 +103,9 @@ class TD3(object):
             current_Q1, current_Q2 = self.critic(state, action)
 
             # Compute critic loss
-            critic_loss = self.criterion(
-                current_Q1, target_Q) + self.criterion(current_Q2, target_Q)
+            critic_loss = self.criterion(current_Q1, target_Q) + self.criterion(
+                current_Q2, target_Q
+            )
 
             # Optimize the critic
             self.critic_optimizer.zero_grad()
@@ -118,13 +125,19 @@ class TD3(object):
                 self.actor_optimizer.step()
 
                 # Update the frozen target models
-                for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
+                for param, target_param in zip(
+                    self.critic.parameters(), self.critic_target.parameters()
+                ):
                     target_param.data.copy_(
-                        self.tau * param.data + (1 - self.tau) * target_param.data)
+                        self.tau * param.data + (1 - self.tau) * target_param.data
+                    )
 
-                for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
+                for param, target_param in zip(
+                    self.actor.parameters(), self.actor_target.parameters()
+                ):
                     target_param.data.copy_(
-                        self.tau * param.data + (1 - self.tau) * target_param.data)
+                        self.tau * param.data + (1 - self.tau) * target_param.data
+                    )
 
     def load(self, filename):
         self.actor.load_model(filename, "actor")
@@ -147,24 +160,31 @@ class DTD3(object):
         self.n = args.n_actor
 
         # actor
-        self.actors = [Actor(state_dim, action_dim, max_action,
-                             layer_norm=args.layer_norm) for i in range(self.n)]
-        self.actors_target = [Actor(
-            state_dim, action_dim, max_action, layer_norm=args.layer_norm) for i in range(self.n)]
-        self.actors_optimizer = [torch.optim.Adam(
-            self.actors[i].parameters(), lr=args.actor_lr) for i in range(self.n)]
+        self.actors = [
+            Actor(state_dim, action_dim, max_action, layer_norm=args.layer_norm)
+            for i in range(self.n)
+        ]
+        self.actors_target = [
+            Actor(state_dim, action_dim, max_action, layer_norm=args.layer_norm)
+            for i in range(self.n)
+        ]
+        self.actors_optimizer = [
+            torch.optim.Adam(self.actors[i].parameters(), lr=args.actor_lr)
+            for i in range(self.n)
+        ]
 
         for i in range(self.n):
             self.actors_target[i].load_state_dict(self.actors[i].state_dict())
 
         # critic
-        self.critic = CriticTD3(state_dim, action_dim,
-                                layer_norm=args.layer_norm)
+        self.critic = CriticTD3(state_dim, action_dim, layer_norm=args.layer_norm)
         self.critic_target = CriticTD3(
-            state_dim, action_dim, layer_norm=args.layer_norm)
+            state_dim, action_dim, layer_norm=args.layer_norm
+        )
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=args.critic_lr)
+            self.critic.parameters(), lr=args.critic_lr
+        )
 
         # cuda
         if torch.cuda.is_available():
@@ -195,19 +215,23 @@ class DTD3(object):
 
             # Sample replay buffer
             states, n_states, actions, rewards, dones = self.memory.sample(
-                self.batch_size)
+                self.batch_size
+            )
 
             # Select action according to policy and add clipped noise
-            noise = np.clip(np.random.normal(0, self.policy_noise, size=(
-                self.batch_size, self.action_dim)), -self.noise_clip, self.noise_clip)
-            next_action = self.actors_target[actor_index](
-                n_states) + FloatTensor(noise)
+            noise = np.clip(
+                np.random.normal(
+                    0, self.policy_noise, size=(self.batch_size, self.action_dim)
+                ),
+                -self.noise_clip,
+                self.noise_clip,
+            )
+            next_action = self.actors_target[actor_index](n_states) + FloatTensor(noise)
             next_action = next_action.clamp(-self.max_action, self.max_action)
 
             # Q target = reward + discount * min_i(Qi(next_state, pi(next_state)))
             with torch.no_grad():
-                target_Q1, target_Q2 = self.critic_target(
-                    n_states, next_action)
+                target_Q1, target_Q2 = self.critic_target(n_states, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
                 target_Q = rewards + (1 - dones) * self.discount * target_Q
 
@@ -215,8 +239,9 @@ class DTD3(object):
             current_Q1, current_Q2 = self.critic(states, actions)
 
             # Compute critic loss
-            critic_loss = self.criterion(
-                current_Q1, target_Q) + self.criterion(current_Q2, target_Q)
+            critic_loss = self.criterion(current_Q1, target_Q) + self.criterion(
+                current_Q2, target_Q
+            )
 
             # Optimize the critic
             self.critic_optimizer.zero_grad()
@@ -236,13 +261,20 @@ class DTD3(object):
                 self.actors_optimizer[actor_index].step()
 
                 # Update the frozen target models
-                for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
+                for param, target_param in zip(
+                    self.critic.parameters(), self.critic_target.parameters()
+                ):
                     target_param.data.copy_(
-                        self.tau * param.data + (1 - self.tau) * target_param.data)
+                        self.tau * param.data + (1 - self.tau) * target_param.data
+                    )
 
-                for param, target_param in zip(self.actors[actor_index].parameters(), self.actors_target[actor_index].parameters()):
+                for param, target_param in zip(
+                    self.actors[actor_index].parameters(),
+                    self.actors_target[actor_index].parameters(),
+                ):
                     target_param.data.copy_(
-                        self.tau * param.data + (1 - self.tau) * target_param.data)
+                        self.tau * param.data + (1 - self.tau) * target_param.data
+                    )
 
     def load(self, filename):
         for i in range(self.n):

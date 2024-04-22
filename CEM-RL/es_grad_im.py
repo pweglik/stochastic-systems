@@ -3,28 +3,26 @@ import argparse
 
 import torch
 import torch.nn as nn
-import torch.multiprocessing as mp
 import torch.nn.functional as F
-import cma
 import pandas as pd
 
-import gym
-import gym.spaces
+import gymnasium as gym
 import numpy as np
 from tqdm import tqdm
 
-from ES import sepCMAES, sepCEM, sepMCEM
+from ES import sepCEM
 from models import RLNN
 from collections import namedtuple
 from random_process import GaussianNoise
-from memory import Memory, Archive
+from memory import Memory
 from samplers import IMSampler
 from util import *
 
 
-Sample = namedtuple('Sample', ('params', 'score',
-                               'gens', 'start_pos', 'end_pos', 'steps'))
-Theta = namedtuple('Theta', ('mu', 'cov', 'samples'))
+Sample = namedtuple(
+    "Sample", ("params", "score", "gens", "start_pos", "end_pos", "steps")
+)
+Theta = namedtuple("Theta", ("mu", "cov", "samples"))
 USE_CUDA = torch.cuda.is_available()
 if USE_CUDA:
     FloatTensor = torch.cuda.FloatTensor
@@ -32,13 +30,16 @@ else:
     FloatTensor = torch.FloatTensor
 
 
-def evaluate(actor, env, memory=None, n_episodes=1, random=False, noise=None, render=False):
+def evaluate(
+    actor, env, memory=None, n_episodes=1, random=False, noise=None, render=False
+):
     """
     Computes the score of an actor on a given number of runs,
     fills the memory if needed
     """
 
     if not random:
+
         def policy(state):
             state = FloatTensor(state.reshape(-1))
             action = actor(state).cpu().data.numpy().flatten()
@@ -49,6 +50,7 @@ def evaluate(actor, env, memory=None, n_episodes=1, random=False, noise=None, re
             return np.clip(action, -max_action, max_action)
 
     else:
+
         def policy(state):
             return env.action_space.sample()
 
@@ -66,8 +68,7 @@ def evaluate(actor, env, memory=None, n_episodes=1, random=False, noise=None, re
             # get next action and act
             action = policy(obs)
             n_obs, reward, done, _ = env.step(action)
-            done_bool = 0 if steps + \
-                1 == env._max_episode_steps else float(done)
+            done_bool = 0 if steps + 1 == env._max_episode_steps else float(done)
             score += reward
             steps += 1
 
@@ -143,7 +144,8 @@ class Actor(RLNN):
         # Update the frozen target models
         for param, target_param in zip(self.parameters(), actor_t.parameters()):
             target_param.data.copy_(
-                self.tau * param.data + (1 - self.tau) * target_param.data)
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
 
 class Critic(RLNN):
@@ -204,7 +206,8 @@ class Critic(RLNN):
         # Update the frozen target models
         for param, target_param in zip(self.parameters(), critic_t.parameters()):
             target_param.data.copy_(
-                self.tau * param.data + (1 - self.tau) * target_param.data)
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
 
 class CriticTD3(RLNN):
@@ -269,8 +272,11 @@ class CriticTD3(RLNN):
         states, n_states, actions, rewards, dones = memory.sample(batch_size)
 
         # Select action according to policy and add clipped noise
-        noise = np.clip(np.random.normal(0, self.policy_noise, size=(
-            batch_size, action_dim)), -self.noise_clip, self.noise_clip)
+        noise = np.clip(
+            np.random.normal(0, self.policy_noise, size=(batch_size, action_dim)),
+            -self.noise_clip,
+            self.noise_clip,
+        )
         n_actions = actor_t(n_states) + FloatTensor(noise)
         n_actions = n_actions.clamp(-max_action, max_action)
 
@@ -284,8 +290,9 @@ class CriticTD3(RLNN):
         current_Q1, current_Q2 = self(states, actions)
 
         # Compute critic loss
-        critic_loss = nn.MSELoss()(current_Q1, target_Q) + \
-            nn.MSELoss()(current_Q2, target_Q)
+        critic_loss = nn.MSELoss()(current_Q1, target_Q) + nn.MSELoss()(
+            current_Q2, target_Q
+        )
 
         # Optimize the critic
         self.optimizer.zero_grad()
@@ -295,78 +302,84 @@ class CriticTD3(RLNN):
         # Update the frozen target models
         for param, target_param in zip(self.parameters(), critic_t.parameters()):
             target_param.data.copy_(
-                self.tau * param.data + (1 - self.tau) * target_param.data)
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--mode', default='train', type=str,)
-    parser.add_argument('--env', default='HalfCheetah-v2', type=str)
-    parser.add_argument('--start_steps', default=10000, type=int)
+    parser.add_argument(
+        "--mode",
+        default="train",
+        type=str,
+    )
+    parser.add_argument("--env", default="HalfCheetah-v2", type=str)
+    parser.add_argument("--start_steps", default=10000, type=int)
 
     # DDPG parameters
-    parser.add_argument('--actor_lr', default=0.001, type=float)
-    parser.add_argument('--critic_lr', default=0.001, type=float)
-    parser.add_argument('--batch_size', default=100, type=int)
-    parser.add_argument('--discount', default=0.99, type=float)
-    parser.add_argument('--reward_scale', default=1., type=float)
-    parser.add_argument('--tau', default=0.005, type=float)
-    parser.add_argument('--layer_norm', dest='layer_norm', action='store_true')
+    parser.add_argument("--actor_lr", default=0.001, type=float)
+    parser.add_argument("--critic_lr", default=0.001, type=float)
+    parser.add_argument("--batch_size", default=100, type=int)
+    parser.add_argument("--discount", default=0.99, type=float)
+    parser.add_argument("--reward_scale", default=1.0, type=float)
+    parser.add_argument("--tau", default=0.005, type=float)
+    parser.add_argument("--layer_norm", dest="layer_norm", action="store_true")
 
     # TD3 parameters
-    parser.add_argument('--use_td3', dest='use_td3', action='store_true')
-    parser.add_argument('--policy_noise', default=0.2, type=float)
-    parser.add_argument('--noise_clip', default=0.5, type=float)
-    parser.add_argument('--policy_freq', default=2, type=int)
+    parser.add_argument("--use_td3", dest="use_td3", action="store_true")
+    parser.add_argument("--policy_noise", default=0.2, type=float)
+    parser.add_argument("--noise_clip", default=0.5, type=float)
+    parser.add_argument("--policy_freq", default=2, type=int)
 
     # Gaussian noise parameters
-    parser.add_argument('--gauss_sigma', default=0.1, type=float)
+    parser.add_argument("--gauss_sigma", default=0.1, type=float)
 
     # OU process parameters
-    parser.add_argument('--ou_noise', dest='ou_noise', action='store_true')
-    parser.add_argument('--ou_theta', default=0.15, type=float)
-    parser.add_argument('--ou_sigma', default=0.2, type=float)
-    parser.add_argument('--ou_mu', default=0.0, type=float)
+    parser.add_argument("--ou_noise", dest="ou_noise", action="store_true")
+    parser.add_argument("--ou_theta", default=0.15, type=float)
+    parser.add_argument("--ou_sigma", default=0.2, type=float)
+    parser.add_argument("--ou_mu", default=0.0, type=float)
 
     # ES parameters
-    parser.add_argument('--pop_size', default=10, type=int)
-    parser.add_argument('--elitism', dest="elitism",  action='store_true')
-    parser.add_argument('--n_grad', default=5, type=int)
-    parser.add_argument('--sigma_init', default=1e-3, type=float)
-    parser.add_argument('--damp', default=1e-3, type=float)
-    parser.add_argument('--damp_limit', default=1e-5, type=float)
-    parser.add_argument('--mult_noise', dest='mult_noise', action='store_true')
+    parser.add_argument("--pop_size", default=10, type=int)
+    parser.add_argument("--elitism", dest="elitism", action="store_true")
+    parser.add_argument("--n_grad", default=5, type=int)
+    parser.add_argument("--sigma_init", default=1e-3, type=float)
+    parser.add_argument("--damp", default=1e-3, type=float)
+    parser.add_argument("--damp_limit", default=1e-5, type=float)
+    parser.add_argument("--mult_noise", dest="mult_noise", action="store_true")
 
     # Sampler parameters
-    parser.add_argument('--alpha', type=float, default=1)
-    parser.add_argument('--epsilon', type=float, default=0)
-    parser.add_argument('--k', type=int, default=1)
+    parser.add_argument("--alpha", type=float, default=1)
+    parser.add_argument("--epsilon", type=float, default=0)
+    parser.add_argument("--k", type=int, default=1)
 
     # Training parameters
-    parser.add_argument('--n_episodes', default=1, type=int)
-    parser.add_argument('--max_steps', default=1000000, type=int)
-    parser.add_argument('--mem_size', default=1000000, type=int)
-    parser.add_argument('--n_noisy', default=0, type=int)
+    parser.add_argument("--n_episodes", default=1, type=int)
+    parser.add_argument("--max_steps", default=1000000, type=int)
+    parser.add_argument("--mem_size", default=1000000, type=int)
+    parser.add_argument("--n_noisy", default=0, type=int)
 
     # Testing parameters
-    parser.add_argument('--filename', default="", type=str)
-    parser.add_argument('--n_test', default=1, type=int)
+    parser.add_argument("--filename", default="", type=str)
+    parser.add_argument("--n_test", default=1, type=int)
 
     # misc
-    parser.add_argument('--output', default='results/', type=str)
-    parser.add_argument('--period', default=5000, type=int)
-    parser.add_argument('--n_eval', default=10, type=int)
-    parser.add_argument('--save_all_models',
-                        dest="save_all_models", action="store_true")
-    parser.add_argument('--debug', dest='debug', action='store_true')
-    parser.add_argument('--seed', default=-1, type=int)
-    parser.add_argument('--render', dest='render', action='store_true')
+    parser.add_argument("--output", default="results/", type=str)
+    parser.add_argument("--period", default=5000, type=int)
+    parser.add_argument("--n_eval", default=10, type=int)
+    parser.add_argument(
+        "--save_all_models", dest="save_all_models", action="store_true"
+    )
+    parser.add_argument("--debug", dest="debug", action="store_true")
+    parser.add_argument("--seed", default=-1, type=int)
+    parser.add_argument("--render", dest="render", action="store_true")
 
     args = parser.parse_args()
     args.output = get_output_folder(args.output, args.env)
-    with open(args.output + "/parameters.txt", 'w') as file:
+    with open(args.output + "/parameters.txt", "w") as file:
         for key, value in vars(args).items():
             file.write("{} = {}\n".format(key, value))
 
@@ -403,13 +416,29 @@ if __name__ == "__main__":
         actor_t.cuda()
 
     # CEM
-    es = sepCEM(actor.get_size(), mu_init=actor.get_params(), sigma_init=args.sigma_init, damp=args.damp, damp_limit=args.damp_limit,
-                pop_size=args.pop_size, antithetic=not args.pop_size % 2, parents=args.pop_size // 2, elitism=args.elitism)
+    es = sepCEM(
+        actor.get_size(),
+        mu_init=actor.get_params(),
+        sigma_init=args.sigma_init,
+        damp=args.damp,
+        damp_limit=args.damp_limit,
+        pop_size=args.pop_size,
+        antithetic=not args.pop_size % 2,
+        parents=args.pop_size // 2,
+        elitism=args.elitism,
+    )
     sampler = IMSampler(es)
 
     # stuff to save
-    df = pd.DataFrame(columns=["total_steps", "average_score",
-                               "average_score_rl", "average_score_ea", "best_score"])
+    df = pd.DataFrame(
+        columns=[
+            "total_steps",
+            "average_score",
+            "average_score_rl",
+            "average_score_ea",
+            "best_score",
+        ]
+    )
 
     # training
     step_cpt = 0
@@ -443,8 +472,7 @@ if __name__ == "__main__":
                 # set params
                 actor.set_params(es_params[i])
                 actor_t.set_params(es_params[i])
-                actor.optimizer = torch.optim.Adam(
-                    actor.parameters(), lr=args.actor_lr)
+                actor.optimizer = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
 
                 # critic update
                 for _ in tqdm(range((actor_steps + reused_steps) // args.n_grad)):
@@ -452,8 +480,7 @@ if __name__ == "__main__":
 
                 # actor update
                 for _ in tqdm(range(actor_steps + reused_steps)):
-                    actor.update(memory, args.batch_size,
-                                 critic, actor_t)
+                    actor.update(memory, args.batch_size, critic, actor_t)
 
                 # get the params back in the population
                 es_params[i] = actor.get_params()
@@ -464,10 +491,16 @@ if __name__ == "__main__":
         # evaluate noisy actor(s)
         for i in range(args.n_noisy):
             actor.set_params(es_params[i])
-            f, steps = evaluate(actor, env, memory=memory, n_episodes=args.n_episodes,
-                                render=args.render, noise=a_noise)
+            f, steps = evaluate(
+                actor,
+                env,
+                memory=memory,
+                n_episodes=args.n_episodes,
+                render=args.render,
+                noise=a_noise,
+            )
             actor_steps += steps
-            prCyan('Noisy actor {} fitness:{}'.format(i, f))
+            prCyan("Noisy actor {} fitness:{}".format(i, f))
 
         # evaluate all actors
         for i in range(args.pop_size):
@@ -477,8 +510,13 @@ if __name__ == "__main__":
 
                 actor.set_params(es_params[i])
                 pos = memory.get_pos()
-                f, steps = evaluate(actor, env, memory=memory, n_episodes=args.n_episodes,
-                                    render=args.render)
+                f, steps = evaluate(
+                    actor,
+                    env,
+                    memory=memory,
+                    n_episodes=args.n_episodes,
+                    render=args.render,
+                )
                 actor_steps += steps
 
                 # updating arrays
@@ -487,7 +525,7 @@ if __name__ == "__main__":
                 n_start[i] = pos
 
                 # print scores
-                prLightPurple('Actor {}, fitness:{}'.format(i, f))
+                prLightPurple("Actor {}, fitness:{}".format(i, f))
 
             # reusing actors
             else:
@@ -497,15 +535,15 @@ if __name__ == "__main__":
                 n_start[i] = old_n_start[idx]
 
                 # duplicating samples in buffer
-                memory.repeat(int(n_start[i]), int(
-                    (n_start[i] + n_steps[i]) % args.mem_size))
+                memory.repeat(
+                    int(n_start[i]), int((n_start[i] + n_steps[i]) % args.mem_size)
+                )
 
                 # adding old_steps
                 reused_steps += old_n_steps[idx]
 
                 # print reused score
-                prGreen('Actor {}, fitness:{}'.format(
-                    i, fitness[i]))
+                prGreen("Actor {}, fitness:{}".format(i, fitness[i]))
 
         # update ea
         es.tell(es_params, fitness)
@@ -526,28 +564,38 @@ if __name__ == "__main__":
             # evaluate mean actor over several runs. Memory is not filled
             # and steps are not counted
             actor.set_params(es.mu)
-            f_mu, _ = evaluate(actor, env, memory=None, n_episodes=args.n_eval,
-                               render=args.render)
-            prRed('Actor Mu Average Fitness:{}'.format(f_mu))
+            f_mu, _ = evaluate(
+                actor, env, memory=None, n_episodes=args.n_eval, render=args.render
+            )
+            prRed("Actor Mu Average Fitness:{}".format(f_mu))
 
             df.to_pickle(args.output + "/log.pkl")
-            res = {"total_steps": total_steps,
-                   "average_score": np.mean(fitness),
-                   "average_score_half": np.mean(np.partition(fitness, args.pop_size // 2 - 1)[args.pop_size // 2:]),
-                   "average_score_rl": np.mean(fitness[:args.n_grad]) if args.n_grad > 0 else None,
-                   "average_score_ea": np.mean(fitness[args.n_grad:]),
-                   "best_score": np.max(fitness),
-                   "mu_score": f_mu,
-                   "n_reused": n_r}
+            res = {
+                "total_steps": total_steps,
+                "average_score": np.mean(fitness),
+                "average_score_half": np.mean(
+                    np.partition(fitness, args.pop_size // 2 - 1)[args.pop_size // 2 :]
+                ),
+                "average_score_rl": (
+                    np.mean(fitness[: args.n_grad]) if args.n_grad > 0 else None
+                ),
+                "average_score_ea": np.mean(fitness[args.n_grad :]),
+                "best_score": np.max(fitness),
+                "mu_score": f_mu,
+                "n_reused": n_r,
+            }
 
             if args.save_all_models:
-                os.makedirs(args.output + "/{}_steps".format(total_steps),
-                            exist_ok=True)
+                os.makedirs(
+                    args.output + "/{}_steps".format(total_steps), exist_ok=True
+                )
                 critic.save_model(
-                    args.output + "/{}_steps".format(total_steps), "critic")
+                    args.output + "/{}_steps".format(total_steps), "critic"
+                )
                 actor.set_params(es.mu)
                 actor.save_model(
-                    args.output + "/{}_steps".format(total_steps), "actor_mu")
+                    args.output + "/{}_steps".format(total_steps), "actor_mu"
+                )
             else:
                 critic.save_model(args.output, "critic")
                 actor.set_params(es.mu)

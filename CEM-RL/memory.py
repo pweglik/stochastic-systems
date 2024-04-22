@@ -12,7 +12,7 @@ else:
 # and https://github.com/jingweiz/pytorch-distributed/blob/master/core/memories/shared_memory.py
 
 
-class Memory():
+class Memory:
 
     def __init__(self, memory_size, state_dim, action_dim):
 
@@ -25,10 +25,8 @@ class Memory():
 
         if USE_CUDA:
             self.states = torch.zeros(self.memory_size, self.state_dim).cuda()
-            self.actions = torch.zeros(
-                self.memory_size, self.action_dim).cuda()
-            self.n_states = torch.zeros(
-                self.memory_size, self.state_dim).cuda()
+            self.actions = torch.zeros(self.memory_size, self.action_dim).cuda()
+            self.n_states = torch.zeros(self.memory_size, self.state_dim).cuda()
             self.rewards = torch.zeros(self.memory_size, 1).cuda()
             self.dones = torch.zeros(self.memory_size, 1).cuda()
 
@@ -68,13 +66,16 @@ class Memory():
 
         upper_bound = self.memory_size if self.full else self.pos
         batch_inds = torch.LongTensor(
-            np.random.randint(0, upper_bound, size=batch_size))
+            np.random.randint(0, upper_bound, size=batch_size)
+        )
 
-        return (self.states[batch_inds],
-                self.n_states[batch_inds],
-                self.actions[batch_inds],
-                self.rewards[batch_inds],
-                self.dones[batch_inds])
+        return (
+            self.states[batch_inds],
+            self.n_states[batch_inds],
+            self.actions[batch_inds],
+            self.rewards[batch_inds],
+            self.dones[batch_inds],
+        )
 
     def get_reward(self, start_pos, end_pos):
 
@@ -135,7 +136,7 @@ class Memory():
                     self.pos = 0
 
 
-class SharedMemory():
+class SharedMemory:
 
     def __init__(self, memory_size, state_dim, action_dim):
 
@@ -143,15 +144,12 @@ class SharedMemory():
         self.memory_size = memory_size
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.pos = mp.Value('l', 0)
-        self.full = mp.Value('b', False)
+        self.pos = mp.Value("l", 0)
+        self.full = mp.Value("b", False)
 
-        self.states = FloatTensor(torch.zeros(
-            self.memory_size, self.state_dim))
-        self.actions = FloatTensor(torch.zeros(
-            self.memory_size, self.action_dim))
-        self.n_states = FloatTensor(
-            torch.zeros(self.memory_size, self.state_dim))
+        self.states = FloatTensor(torch.zeros(self.memory_size, self.state_dim))
+        self.actions = FloatTensor(torch.zeros(self.memory_size, self.action_dim))
+        self.n_states = FloatTensor(torch.zeros(self.memory_size, self.state_dim))
         self.rewards = FloatTensor(torch.zeros(self.memory_size, 1))
         self.dones = FloatTensor(torch.zeros(self.memory_size, 1))
 
@@ -193,13 +191,16 @@ class SharedMemory():
 
         upper_bound = self.memory_size if self.full.value else self.pos.value
         batch_inds = torch.LongTensor(
-            np.random.randint(0, upper_bound, size=batch_size))
+            np.random.randint(0, upper_bound, size=batch_size)
+        )
 
-        return (self.states[batch_inds],
-                self.n_states[batch_inds],
-                self.actions[batch_inds],
-                self.rewards[batch_inds],
-                self.dones[batch_inds])
+        return (
+            self.states[batch_inds],
+            self.n_states[batch_inds],
+            self.actions[batch_inds],
+            self.rewards[batch_inds],
+            self.dones[batch_inds],
+        )
 
     def sample(self, batch_size):
         with self.memory_lock:
