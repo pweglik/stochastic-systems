@@ -60,14 +60,15 @@ def evaluate(
     for _ in range(n_episodes):
 
         score = 0
-        obs = deepcopy(env.reset())
+        obs, _ = deepcopy(env.reset())
         done = False
 
         while not done:
 
             # get next action and act
             action = policy(obs)
-            n_obs, reward, done, _ = env.step(action)
+            n_obs, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
             done_bool = 0 if steps + 1 == env._max_episode_steps else float(done)
             score += reward
             steps += 1
@@ -315,7 +316,7 @@ if __name__ == "__main__":
         default="train",
         type=str,
     )
-    parser.add_argument("--env", default="HalfCheetah-v2", type=str)
+    parser.add_argument("--env", default="HalfCheetah-v4", type=str)
     parser.add_argument("--start_steps", default=10000, type=int)
 
     # DDPG parameters
@@ -458,9 +459,9 @@ if __name__ == "__main__":
 
     while total_steps < args.max_steps:
 
-        fitness = np.zeros(args.pop_size)
-        n_start = np.zeros(args.pop_size)
-        n_steps = np.zeros(args.pop_size)
+        fitness = np.zeros(args.pop_size, dtype=np.int64)
+        n_start = np.zeros(args.pop_size, dtype=np.int64)
+        n_steps = np.zeros(args.pop_size, dtype=np.int64)
         es_params, n_r, idx_r = sampler.ask(args.pop_size, old_es_params)
         print("Reused {} samples".format(n_r))
 
@@ -600,7 +601,7 @@ if __name__ == "__main__":
                 critic.save_model(args.output, "critic")
                 actor.set_params(es.mu)
                 actor.save_model(args.output, "actor")
-            df = df.append(res, ignore_index=True)
+            df.loc[len(df.index)] = pd.Series(res)
             step_cpt = 0
             print(res)
 

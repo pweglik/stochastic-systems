@@ -28,7 +28,7 @@ class RLNN(nn.Module):
         """
         cpt = 0
         for param in self.parameters():
-            tmp = np.product(param.size())
+            tmp = np.prod(param.size())
 
             if torch.cuda.is_available():
                 param.data.copy_(
