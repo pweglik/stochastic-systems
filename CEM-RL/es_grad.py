@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_test", default=1, type=int)
 
     # misc
-    parser.add_argument("--output", default="results/", type=str)
+    parser.add_argument("--output", default="results_no_im/", type=str)
     parser.add_argument("--period", default=1000, type=int)
     parser.add_argument("--n_eval", default=10, type=int)
     parser.add_argument(
