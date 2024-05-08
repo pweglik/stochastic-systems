@@ -8,3 +8,4 @@ torch==2.0.0
 cma
 pandas
 scipy
+seaborn

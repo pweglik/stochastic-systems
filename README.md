@@ -11,6 +11,12 @@ pip install swig
 pip install -r requirements.txt
 ```
 
+### How to run
+
+```
+python es_grad_im.py --use_td3
+```
+
 ### TODO
 
 1. Memory should be independent of agents - we can use same data to train many agents independently.
