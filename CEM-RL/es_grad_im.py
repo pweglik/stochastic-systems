@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 
 from ES import sepCEM
-from models import Actor, Critic, CriticTD3
+from models import Actor, Critic, CriticTD3, evaluate
 from collections import namedtuple
 from random_process import GaussianNoise
 from memory import Memory
@@ -26,68 +26,6 @@ if USE_CUDA:
     FloatTensor = torch.cuda.FloatTensor
 else:
     FloatTensor = torch.FloatTensor
-
-
-def evaluate(
-    actor, env, memory=None, n_episodes=1, random=False, noise=None, render=False
-):
-    """
-    Computes the score of an actor on a given number of runs,
-    fills the memory if needed
-    """
-
-    if not random:
-
-        def policy(state):
-            state = FloatTensor(state.reshape(-1))
-            action = actor(state).cpu().data.numpy().flatten()
-
-            if noise is not None:
-                action += noise.sample()
-
-            return np.clip(action, -max_action, max_action)
-
-    else:
-
-        def policy(state):
-            return env.action_space.sample()
-
-    scores = []
-    steps = 0
-
-    for _ in range(n_episodes):
-
-        score = 0
-        obs, _ = deepcopy(env.reset())
-        done = False
-
-        while not done:
-
-            # get next action and act
-            action = policy(obs)
-            n_obs, reward, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            done_bool = 0 if steps + 1 == env._max_episode_steps else float(done)
-            score += reward
-            steps += 1
-
-            # adding in memory
-            if memory is not None:
-                memory.add((obs, n_obs, action, reward, done_bool))
-            obs = n_obs
-
-            # render if needed
-            if render:
-                env.render()
-
-            # reset when done
-            if done:
-                env.reset()
-
-        scores.append(score)
-
-    return np.mean(scores), steps
-
 
 if __name__ == "__main__":
 
@@ -281,6 +219,7 @@ if __name__ == "__main__":
                 n_episodes=args.n_episodes,
                 render=args.render,
                 noise=a_noise,
+                max_action=max_action,
             )
             actor_steps += steps
             prCyan("Noisy actor {} fitness:{}".format(i, f))
@@ -299,6 +238,7 @@ if __name__ == "__main__":
                     memory=memory,
                     n_episodes=args.n_episodes,
                     render=args.render,
+                    max_action=max_action,
                 )
                 actor_steps += steps
 
@@ -348,7 +288,12 @@ if __name__ == "__main__":
             # and steps are not counted
             actor.set_params(es.mu)
             f_mu, _ = evaluate(
-                actor, env, memory=None, n_episodes=args.n_eval, render=args.render
+                actor,
+                env,
+                memory=None,
+                n_episodes=args.n_eval,
+                render=args.render,
+                max_action=max_action,
             )
             prRed("Actor Mu Average Fitness:{}".format(f_mu))
 

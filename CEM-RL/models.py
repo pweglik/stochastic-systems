@@ -14,6 +14,71 @@ else:
     FloatTensor = torch.FloatTensor
 
 
+def evaluate(
+    actor,
+    env,
+    memory=None,
+    n_episodes=1,
+    random=False,
+    noise=None,
+    render=False,
+    max_action=1,
+):
+    """
+    Computes the score of an actor on a given number of runs,
+    fills the memory if needed
+    """
+
+    def policy(state):
+        if not random:
+            state = FloatTensor(state.reshape(-1))
+            action = actor(state).cpu().data.numpy().flatten()
+
+            if noise is not None:
+                action += noise.sample()
+
+            return np.clip(action, -max_action, max_action)
+        else:
+
+            return env.action_space.sample()
+
+    scores = []
+    steps = 0
+
+    for _ in range(n_episodes):
+
+        score = 0
+        obs, _ = deepcopy(env.reset())
+        done = False
+
+        while not done:
+
+            # get next action and act
+            action = policy(obs)
+            n_obs, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            done_bool = 0 if steps + 1 == env._max_episode_steps else float(done)
+            score += reward
+            steps += 1
+
+            # adding in memory
+            if memory is not None:
+                memory.add((obs, n_obs, action, reward, done_bool))
+            obs = n_obs
+
+            # render if needed
+            if render:
+                env.render()
+
+            # reset when done
+            if done:
+                env.reset()
+
+        scores.append(score)
+
+    return np.mean(scores), steps
+
+
 class RLNN(nn.Module):
 
     def __init__(self, state_dim, action_dim, max_action):
