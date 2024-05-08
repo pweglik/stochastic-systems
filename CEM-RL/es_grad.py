@@ -34,7 +34,7 @@ if __name__ == "__main__":
         default="train",
         type=str,
     )
-    parser.add_argument("--env", default="HalfCheetah-v5", type=str)
+    parser.add_argument("--env", default="HalfCheetah-v4", type=str)
     parser.add_argument("--start_steps", default=10000, type=int)
 
     # DDPG parameters
