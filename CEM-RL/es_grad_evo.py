@@ -1,4 +1,5 @@
 from copy import deepcopy
+from evolution import evolve
 import argparse
 
 import torch
@@ -11,7 +12,6 @@ import numpy as np
 from tqdm import tqdm
 
 from ES import sepCEM
-from models import RLNN
 from models import Actor, Critic, CriticTD3, evaluate
 from random_process import GaussianNoise, OrnsteinUhlenbeckProcess
 from memory import Memory
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_test", default=1, type=int)
 
     # misc
-    parser.add_argument("--output", default="results_no_im/", type=str)
+    parser.add_argument("--output", default="results_evo/", type=str)
     parser.add_argument("--period", default=1000, type=int)
     parser.add_argument("--n_eval", default=10, type=int)
     parser.add_argument(
@@ -148,7 +148,8 @@ if __name__ == "__main__":
         parents=args.pop_size // 2,
         elitism=args.elitism,
     )
-    # es = Control(actor.get_size(), pop_size=args.pop_size, mu_init=actor.get_params())
+
+    org_params = es.ask(args.pop_size)
 
     # training
     step_cpt = 0
@@ -169,7 +170,6 @@ if __name__ == "__main__":
         # print(args.start_steps)
         fitness = []
         fitness_ = []
-        es_params = es.ask(args.pop_size)
 
         # udpate the rl actors and the critic
         if total_steps > args.start_steps:
@@ -177,8 +177,8 @@ if __name__ == "__main__":
             for i in range(args.n_grad):
 
                 # set params
-                actor.set_params(es_params[i])
-                actor_t.set_params(es_params[i])
+                actor.set_params(org_params[i])
+                actor_t.set_params(org_params[i])
                 actor.optimizer = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
 
                 # critic update
@@ -189,12 +189,12 @@ if __name__ == "__main__":
                 for _ in tqdm(range(actor_steps)):
                     actor.update(memory, args.batch_size, critic, actor_t)
                 # get the params back in the population
-                es_params[i] = actor.get_params()
+                org_params[i] = actor.get_params()
         actor_steps = 0
 
         # evaluate noisy actor(s)
         for i in range(args.n_noisy):
-            actor.set_params(es_params[i])
+            actor.set_params(org_params[i])
             f, steps = evaluate(
                 actor,
                 env,
@@ -207,7 +207,7 @@ if __name__ == "__main__":
             prCyan("Noisy actor {} fitness:{}".format(i, f))
 
         # evaluate all actors
-        for params in es_params:
+        for params in org_params:
 
             actor.set_params(params)
             f, steps = evaluate(
@@ -224,8 +224,8 @@ if __name__ == "__main__":
             # print scores
             prLightPurple("Actor fitness:{}".format(f))
 
-        # update es
-        es.tell(es_params, fitness)
+        # TUTAJ MUTACJE
+        org_params = evolve(org_params, fitness)
 
         # update step counts
         total_steps += actor_steps

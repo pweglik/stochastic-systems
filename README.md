@@ -15,6 +15,8 @@ pip install -r requirements.txt
 
 ```
 python es_grad_im.py --use_td3
+python3 es_grad.py --use_td3
+python3 es_grad_evo.py
 ```
 
 ### TODO
