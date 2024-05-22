@@ -1,30 +1,7 @@
 import numpy as np
 
-
-def tell(self, solutions, scores):
-    """
-    Updates the distribution
-    """
-    scores = np.array(scores)
-    scores *= -1
-    idx_sorted = np.argsort(scores)
-
-    old_mu = self.mu
-    self.damp = self.damp * self.tau + (1 - self.tau) * self.damp_limit
-    self.mu = self.weights @ solutions[idx_sorted[: self.parents]]
-
-    z = solutions[idx_sorted[: self.parents]] - old_mu
-    self.cov = 1 / self.parents * self.weights @ (z * z) + self.damp * np.ones(
-        self.num_params
-    )
-
-    self.elite = solutions[idx_sorted[0]]
-    self.elite_score = scores[idx_sorted[0]]
-    print(self.cov)
-
-
 N_BEST_DENOMINATOR = 2
-NORMAL_DENOMINATOR = N_BEST_DENOMINATOR * 10
+NORMAL_DENOMINATOR = 20
 
 
 def evolve(orgs, fitness):
